@@ -77,8 +77,9 @@ The skill calls `windowctl` via these subcommands only:
 - `windowctl monitors list [--json]`
 - `windowctl move (--title <s> | --app <s>) [--monitor <n>] (--zone <z> | --x <n> --y <n> --w <n> --h <n>)`
 - `windowctl resize (--title <s> | --app <s>) --w <n> --h <n>`
+- `windowctl batch [--file <path>] [--json]` — reads a JSON array of move specs from stdin or `--file`
 - `windowctl focus (--title <s> | --app <s>)`
-- `windowctl permissions [--status]`
+- `windowctl permissions [--status] [--json]`
 
 That's the entire surface. The skill never reads window lists from any other source and never calls into platform window APIs directly.
 
@@ -96,6 +97,8 @@ That's the entire surface. The skill never reads window lists from any other sou
 8. Skill runs `windowctl focus --title "jira"`.
 9. You: *"resize this to 900x700"*
 10. Skill runs `windowctl resize --app "Google Chrome" --w 900 --h 700`.
+11. You: *"split chrome left, slack right, and put terminal on monitor 2 bottom-half"*
+12. Skill builds a JSON layout (lowercase keys: `app`, `monitor`, `zone`) and pipes it to `windowctl batch`, then renders one per-entry summary.
 
 Multi-monitor: *"send chrome to my external display"* →
 `windowctl monitors list --json` → pick the non-primary monitor by id →
@@ -110,6 +113,7 @@ Multi-monitor: *"send chrome to my external display"* →
 - [`references/monitors.md`](./references/monitors.md) — `monitors list` + how to resolve IDs from heuristics
 - [`references/move.md`](./references/move.md) — `move` recipes (zone, split, absolute / relative coords, monitor auto-resolve)
 - [`references/resize.md`](./references/resize.md) — `resize` recipes (change W/H in place, keep current X/Y)
+- [`references/batch.md`](./references/batch.md) — `batch` recipes (bulk-apply / save / restore JSON layouts)
 - [`references/focus.md`](./references/focus.md) — `focus` recipes (raise + activate)
 - [`references/permissions.md`](./references/permissions.md) — macOS Accessibility (`windowctl permissions [--status]`)
 - [`references/zones.md`](./references/zones.md) — cheatsheet for `1A`, `1B`, `2A..2D`, and `N:M` splits

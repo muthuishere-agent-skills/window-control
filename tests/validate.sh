@@ -29,7 +29,7 @@ passes=0
 pass() { green "  OK  $*"; passes=$((passes+1)); }
 fail() { red   "  FAIL $*"; fails=$((fails+1)); }
 
-REF_FILES=(windows.md monitors.md move.md resize.md focus.md permissions.md zones.md recipes.md)
+REF_FILES=(windows.md monitors.md move.md resize.md batch.md focus.md permissions.md zones.md recipes.md)
 
 # 1. SKILL.md frontmatter
 hdr "SKILL.md frontmatter"
@@ -76,7 +76,7 @@ done
 # 4. Every recipe heading has the four required labels.
 # Recipes use ##  XXX-N[-N]:  (h2). Match an uppercase prefix + dash-separated tail.
 hdr "recipe blocks"
-RECIPE_FILES=(windows.md monitors.md move.md resize.md focus.md permissions.md recipes.md)
+RECIPE_FILES=(windows.md monitors.md move.md resize.md batch.md focus.md permissions.md recipes.md)
 RECIPE_RE='^## [A-Z][A-Z0-9-]+:'
 for f in "${RECIPE_FILES[@]}"; do
   path="$REF_DIR/$f"
@@ -112,7 +112,7 @@ fi
 
 # 6. recipes.md only invokes known subcommands
 hdr "recipes.md subcommand whitelist"
-KNOWN_RE='^(windows|monitors|move|focus|permissions|resize)$'
+KNOWN_RE='^(windows|monitors|move|focus|permissions|resize|batch)$'
 bad=$(grep -E '^[[:space:]]*windowctl ' "$REF_DIR/recipes.md" 2>/dev/null \
   | sed -E 's/.*windowctl[[:space:]]+([a-z]+).*/\1/' \
   | sort -u \

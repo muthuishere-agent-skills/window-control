@@ -6,9 +6,10 @@ name: window-ctl-skill
 
 Covers `windowctl windows list` across macOS, Windows, and Linux.
 
-The list returns every window the OS exposes — on macOS that includes
-menubar agents, system UI, and helper processes (typically 40+
-entries). **Always filter** before showing the result to the user.
+The list is now filtered server-side to real application windows
+only (macOS `kCGWindowLayer == 0`); a typical session returns ~5–15
+entries. Menubar widgets, status items, the Dock, Spotlight, Control
+Center, AltTab, and Window Server menubars are excluded.
 
 **Filter semantics (load-bearing):**
 - `--title <s>` — case-insensitive **substring** match against the
@@ -35,7 +36,8 @@ entries). **Always filter** before showing the result to the user.
 
 **User-visible formatting (family default):**
 - For lists, group by `App`, show `<App> — <count>` lines, then 1–3
-  sample titles per app. Never paste the raw 40-row table.
+  sample titles per app. With ~5–15 entries the full list is fine
+  to show inline.
 - For single-window output, show: `ID  App  Title  Monitor  WxH+X+Y`.
 
 ---
@@ -50,15 +52,15 @@ open".
 windowctl windows list --json
 ```
 
-**Expected response:** JSON array per the schema above. On macOS
-this commonly returns 30–80 entries.
+**Expected response:** JSON array per the schema above. Typically
+5–15 entries (server-side filtered to real application windows).
 
 **Common errors:** None — `windows list` does not require AX
 permission and never returns `Accessibility permission denied`.
 
 **User-visible formatting:** Group by `App`. Print
 `Total: <N> windows across <M> apps`, then a sorted-by-count list.
-Stop at top 10 apps; offer "say more for the rest".
+At 5–15 entries the full list fits inline.
 
 ---
 

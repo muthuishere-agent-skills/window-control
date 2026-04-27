@@ -5,18 +5,20 @@ description: >
   open windows, list monitors (with which one is ACTIVE / has the
   FOCUSED window), move a window into a predefined zone (1A, 1B,
   2A..2D), an N:M split, or absolute / monitor-relative coordinates,
-  resize a window in place, focus a window, and request the macOS
-  Accessibility permission needed for move / resize / focus. Trigger
-  on: list windows, show open windows, what windows do I have, list
-  monitors, show displays, which monitor is active, where's my cursor,
-  which monitor has focus, move chrome to the left half, snap terminal
-  to the right half, put slack on monitor 2, place editor in the
-  top-right quarter, three-way / N-way split, send to external
-  display, resize chrome to 900x700, make this window smaller, focus
-  jira, raise window, bring app to front, request / check
-  accessibility permission, AX permission, grant screen control,
-  debug windowctl AX bridge. Uses `windowctl`
-  (`npm install -g @muthuishere/windowctl`).
+  resize a window in place, focus a window, **bulk-apply a layout of
+  many windows in one call (`windowctl batch`)**, and request the
+  macOS Accessibility permission needed for move / resize / focus /
+  batch. Trigger on: list windows, show open windows, what windows do
+  I have, list monitors, show displays, which monitor is active,
+  where's my cursor, which monitor has focus, move chrome to the left
+  half, snap terminal to the right half, put slack on monitor 2,
+  place editor in the top-right quarter, three-way / N-way split,
+  send to external display, resize chrome to 900x700, make this
+  window smaller, focus jira, raise window, bring app to front,
+  apply my layout, save my arrangement, restore work mode, batch
+  place windows, request / check accessibility permission, AX
+  permission, grant screen control, debug windowctl AX bridge. Uses
+  `windowctl` (`npm install -g @muthuishere/windowctl`).
 ---
 
 <!-- version: 0.1.0 -->
@@ -88,10 +90,22 @@ recipe knowledge; `windowctl` owns the OS-specific window operations.
   shells out to `wmctrl` + `xrandr`; Wayland is unsupported beyond
   what `wmctrl` can fake. Don't promise pixel-exact placement on
   those.
-- **Don't dump huge window lists.** A typical macOS session has
-  40+ CGWindow entries (menubar agents, system UI). Filter with
-  `--title` / `--app` first, or summarize by app + count and offer
-  to expand.
+- **`windows list` is now filtered server-side.** Only real
+  application windows (macOS `kCGWindowLayer == 0`) are returned —
+  ~5–15 entries in a typical session. Menubar widgets, the Dock,
+  Spotlight, Control Center, AltTab, status items are excluded by
+  the CLI. The full list usually fits inline; group by app rather
+  than truncating.
+- **Prefer `batch` for any multi-window placement in one turn.**
+  When the user names two-or-more placements at once ("split chrome
+  left and slack right, terminal on monitor 2"), build a JSON
+  layout array and pipe to `windowctl batch` (one call, one
+  rendered summary, partial-failure tolerant) rather than firing
+  N sequential `move` calls. See `references/batch.md`. Note: the
+  `batch` JSON uses **lowercase** keys (`app`, `title`, `monitor`,
+  `zone`, `x/y/w/h`) — different from the PascalCase returned by
+  `windows list --json` and `monitors list --json`. Anything that
+  pipes one into the other has to translate.
 - **Stop after each successful action.** Don't auto-chain ("moved
   Chrome — would you like me to also move Slack?"). Wait for the
   next instruction.
@@ -119,6 +133,7 @@ If the session ends, the skill re-lists.
    - List monitors (incl. ACTIVE / FOCUSED) → `references/monitors.md`
    - Move a window (zone, split, coords) → `references/move.md`
    - Resize a window in place → `references/resize.md`
+   - Bulk-place / save / restore a layout (`windowctl batch`) → `references/batch.md`
    - Focus / raise a window → `references/focus.md`
    - macOS Accessibility prompts + AX-bridge debugging → `references/permissions.md`
    - Composite layouts ("split chrome + slack 50/50") → `references/recipes.md`
@@ -148,6 +163,7 @@ Zero-exit means the catalogue is internally consistent and installable.
 | Monitors (list, ACTIVE / FOCUSED resolution) | `references/monitors.md` |
 | Move (zone / split / coords / multi-monitor / clamp handling) | `references/move.md` |
 | Resize (in-place width/height change) | `references/resize.md` |
+| Batch (bulk-apply / save / restore layouts) | `references/batch.md` |
 | Focus (raise + activate, "this window" via Focused) | `references/focus.md` |
 | Permissions (macOS Accessibility, `WCTL_AX_DEBUG`) | `references/permissions.md` |
 | Zones (1A..2D + N:M cheatsheet) | `references/zones.md` |

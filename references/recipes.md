@@ -195,3 +195,92 @@ keep X/Y where they are.
   unchanged) so they can pick a valid target.
 - Zero windows with `Focused: true` → same fallback as CMP-7
   (re-poll once, then ask).
+
+---
+
+## CMP-9: Apply a multi-window layout in one call
+
+**When to use:** the user names multiple placements in a single turn —
+"split chrome and slack 50/50, put terminal on monitor 2 bottom-half,
+send my browser to the external", "set up these four windows for me",
+or any "do all of these placements" instruction. Prefer `batch` over a
+sequence of `move` calls: one CLI invocation, one summary, partial
+failures don't abort the rest of the layout, less terminal noise.
+
+**Sequence:**
+1. Pre-flight every named app:
+   `windowctl windows list --app "<App>" --json` for each. If any
+   returns 0 windows, fail-fast — list which apps are missing and
+   ask. Do not send a partial batch.
+2. Build a JSON array of entries. **Field names are lowercase**
+   (`app`, `title`, `monitor`, `zone`, `x`, `y`, `w`, `h`) — this is
+   different from the PascalCase used in `windows list --json`
+   output. Per-entry rules: at least one of `title`/`app` required;
+   target is EITHER `zone` OR all four `x/y/w/h`; `monitor` is
+   1-indexed and optional.
+3. Pipe to `windowctl batch` (heredoc) or write to a temp file and
+   pass `--file`. Add `--json` so each entry is reported as
+   `{ "entry": ..., "ok": true }` or `{ "entry": ..., "error": "..." }`.
+
+   ```sh
+   windowctl batch --json <<'EOF'
+   [
+     { "app": "Google Chrome", "zone": "1A" },
+     { "app": "Slack",         "zone": "1B" },
+     { "app": "Terminal",      "monitor": 2, "zone": "2C" },
+     { "app": "Arc",           "monitor": 2, "zone": "1A" }
+   ]
+   EOF
+   ```
+4. Parse per-entry results. Exit code 0 = all passed, 1 = at least
+   one failed (rest still applied), 2 = invalid input (fix the JSON
+   and retry — nothing was applied).
+
+**Synthesis:** *"Placed <N>/<total>: chrome left, slack right,
+terminal bottom-half of monitor 2, browser to external. Failed:
+<name> (<per-entry error>)."* Name each entry — don't dump raw
+stdout.
+
+**Common errors:**
+- Pre-flight finds a missing app → ask before sending the batch;
+  don't apply a partial layout silently.
+- Per-entry OS clamp (Chrome's min width, etc.) → surface that one
+  entry's error from the `--json` output, leave the rest as placed.
+- Exit code 2 (invalid input) → the JSON failed validation (missing
+  `app`/`title`, both `zone` and coords, etc.). Fix and retry.
+
+---
+
+## CMP-10: Save and restore a named layout
+
+**When to use:** "save my current arrangement as <name>", "restore my
+<name> layout", "what does my work layout look like", "snapshot this
+setup". Two-phase recipe — save once, restore many times.
+
+**Sequence (save):**
+1. `windowctl windows list --json` — capture every window.
+2. For each window, project the PascalCase fields into the lowercase
+   batch schema. **The case translation is the gotcha:**
+   `{App, Bounds: {X, Y, Width, Height}}` → `{app, x, y, w, h}`.
+   Use absolute coords (not zones) so the layout is exact. Skip
+   `monitor` — coords already pin the window to a display.
+3. Write the resulting JSON array to
+   `~/.windowctl/layouts/<name>.json` (mkdir -p the parent first).
+
+**Sequence (restore):**
+1. `windowctl batch --file ~/.windowctl/layouts/<name>.json --json`.
+2. Parse per-entry output the same way as CMP-9.
+
+**Synthesis:**
+- Save → *"Saved <N> windows to <name>."*
+- Restore → *"Restored <name>: <N>/<total> placed. Failed: <names>."*
+
+**Common errors:**
+- On restore, layout includes apps that aren't running → that entry
+  reports a no-match error in the `--json` output. Surface it and
+  continue; the rest still apply.
+- Window minimum-size clamps on restore (Chrome etc.) — same as
+  CMP-9, surface per-entry, leave the rest as placed.
+- Layout file missing or malformed → `batch` exits 2; tell the user
+  the named layout doesn't exist (or got corrupted) and offer to
+  re-save from the current arrangement.
